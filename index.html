@@ -4,9 +4,14 @@
     <meta charset="UTF-8">
     <!-- 加入 maximum-scale=1.0, user-scalable=no 防止瀏覽器縮放 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>giantCamera | v2.2</title>
+    <title>giantCamera | v2.3</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        * {
+            touch-action: manipulation; /* 強制全網頁元素停用雙擊放大行為 */
+            -webkit-tap-highlight-color: transparent; /* 移除 iOS 點擊時出現的灰色半透明遮罩 */
+        }
+
         body, html {
             margin: 0;
             padding: 0;
@@ -104,6 +109,25 @@
     <video id="video-source" playsinline autoplay muted style="display: none;"></video>
 
     <script>
+        // --- 新增：核心修正，強制攔截 Safari 雙擊與多指手勢 ---
+        // 禁止雙指縮放
+        document.addEventListener('touchstart', function (event) {
+            if (event.touches.length > 1) {
+                event.preventDefault(); 
+            }
+        }, { passive: false });
+
+        // 計算時間差，禁止雙擊放大 (小於 300 毫秒視為雙擊)
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function (event) {
+            const now = (new Date()).getTime();
+            if (now - lastTouchEnd <= 300) {
+                event.preventDefault(); 
+            }
+            lastTouchEnd = now;
+        }, { passive: false });
+        // ------------------------------------------------------
+
         const startBtn = document.getElementById('start-btn');
         const intro = document.getElementById('intro');
         const appContainer = document.getElementById('app-container');
