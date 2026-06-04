@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大中Camera</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            font-family: sans-serif;
+        }
+
+        /* 歡迎/授權畫面 */
+        #intro {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #000;
+            z-index: 10;
+        }
+
+        /* 互動影像容器 */
+        #app-container {
+            position: relative;
+            width: 100%;
+            max-width: 50vh;
+            max-width: 50dvh; /* 優先使用動態視窗高度計算寬度，確保 1:2 比例 */
+            aspect-ratio: 1 / 2; /* 依照 001.png 的 1:2 比例維持不變形 */
+            display: none; /* 取得權限後顯示 */
+        }
+
+        /* 幾何畫布共同設定 */
+        canvas {
+            position: absolute;
+            transform: scaleX(-1); /* 前鏡頭預設為鏡像，在此將畫布翻轉 */
+            transform-origin: center;
+        }
+
+        /* 根據 001.png 定義的 9 個圖形區塊位置與遮罩 (Clip-path) */
+        
+        /* 上方 1/4 兩個正四邊形 */
+        #c1 { left: 0; top: 0; width: 50%; height: 25%; z-index: 1; background-color: #dce831; }
+        #c2 { left: 50%; top: 0; width: 50%; height: 25%; z-index: 1; background-color: #1baf53; }
+
+        /* 中間 1/4 兩個底層矩形，透過頂層三角形覆蓋，視覺上會變成側邊三角形 */
+        #c3 { left: 0; top: 25%; width: 50%; height: 25%; z-index: 1; background-color: #3611a1; }
+        #c5 { left: 50%; top: 25%; width: 50%; height: 25%; z-index: 1; background-color: #8a0ae9; }
+        /* 頂層粉色三角形 */
+        #c4 { 
+            left: 0; top: 25%; width: 100%; height: 25%; z-index: 2; 
+            clip-path: polygon(50% 0, 100% 100%, 0 100%); 
+            background-color: #eb55b4; 
+        }
+
+        /* 下方 1/2 背景矩形 */
+        #c6 { left: 0; top: 50%; width: 50%; height: 50%; z-index: 1; background-color: #017afd; }
+        #c7 { left: 50%; top: 50%; width: 50%; height: 50%; z-index: 1; background-color: #26d1e4; }
+
+        /* 下方中間的紅橘兩色內部矩形 */
+        #c8 { left: 12.5%; top: 68.75%; width: 37.5%; height: 18.75%; z-index: 3; background-color: #f54c37; }
+        #c9 { left: 50%; top: 68.75%; width: 37.5%; height: 18.75%; z-index: 3; background-color: #fe8b20; }
+    </style>
+</head>
+<body>
+
+    <!-- 初始畫面與按鈕 -->
+    <div id="intro">
+        <button id="start-btn" class="px-8 py-3 bg-white text-[#656565] text-[18px] font-bold rounded-full shadow-2xl hover:bg-gray-100 transition-all active:scale-95">
+            大中camera
+        </button>
+    </div>
+
+    <!-- 相機影像處理區塊 -->
+    <div id="app-container">
+        <!-- 九個幾何圖形的畫布 -->
+        <canvas id="c1"></canvas>
+        <canvas id="c2"></canvas>
+        <canvas id="c3"></canvas>
+        <canvas id="c4"></canvas>
+        <canvas id="c5"></canvas>
+        <canvas id="c6"></canvas>
+        <canvas id="c7"></canvas>
+        <canvas id="c8"></canvas>
+        <canvas id="c9"></canvas>
+    </div>
+
+    <!-- 隱藏的攝影機串流來源 -->
+    <video id="video-source" playsinline autoplay muted style="display: none;"></video>
+
+    <script>
+        const startBtn = document.getElementById('start-btn');
+        const intro = document.getElementById('intro');
+        const appContainer = document.getElementById('app-container');
+        const video = document.getElementById('video-source');
+        
+        const canvases = Array.from({length: 9}, (_, i) => document.getElementById(`c${i+1}`));
+        const contexts = canvases.map(c => c.getContext('2d', { alpha: false }));
+
+        let configs = [];
+        let isPlaying = false;
+
+        // 啟動相機與應用
+        startBtn.addEventListener('click', async () => {
+            try {
+                // 取得前置鏡頭
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }
+                });
+                video.srcObject = stream;
+                video.play();
+
+                // 準備就緒後啟動邏輯
+                video.onloadedmetadata = () => {
+                    intro.style.display = 'none';
+                    appContainer.style.display = 'block';
+                    resizeCanvases();
+                    initConfigs();
+                    isPlaying = true;
+                    requestAnimationFrame(renderLoop);
+                };
+            } catch (err) {
+                alert('無法取得相機權限，請確認是否允許存取攝影機。');
+                console.error(err);
+            }
+        });
+
+        // 產生九組不重複的參數：放大倍數 (a) 與 中心座標偏移量 (rx, ry)
+        function initConfigs() {
+            // 產生 1 到 15 的陣列並洗牌 (隨機不重複)
+            const multipliers = Array.from({length: 15}, (_, i) => i + 1);
+            for (let i = multipliers.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [multipliers[i], multipliers[j]] = [multipliers[j], multipliers[i]];
+            }
+
+            configs = [];
+            for (let i = 0; i < 9; i++) {
+                configs.push({
+                    a: multipliers[i],   // 放大倍數 a
+                    rx: Math.random(),   // 相對中心 X (0.0 ~ 1.0)
+                    ry: Math.random()    // 相對中心 Y (0.0 ~ 1.0)
+                });
+            }
+        }
+
+        // 維持 Canvas 解析度與其 CSS 尺寸相同
+        function resizeCanvases() {
+            const dpr = window.devicePixelRatio || 1;
+            canvases.forEach(c => {
+                const rect = c.getBoundingClientRect();
+                c.width = rect.width * dpr;
+                c.height = rect.height * dpr;
+            });
+        }
+
+        window.addEventListener('resize', () => {
+            if (isPlaying) resizeCanvases();
+        });
+
+        // 核心渲染迴圈
+        function renderLoop() {
+            if (!isPlaying) return;
+
+            canvases.forEach((canvas, i) => {
+                const ctx = contexts[i];
+                const config = configs[i];
+                
+                const vw = video.videoWidth;
+                const vh = video.videoHeight;
+                const cw = canvas.width;
+                const ch = canvas.height;
+
+                if (vw === 0 || vh === 0 || cw === 0 || ch === 0) return;
+
+                // 1. 根據畫布比例計算可放入最大的畫面區域 (Object-fit: cover 邏輯)
+                const cr = cw / ch;
+                let mw, mh;
+                if (vw / vh > cr) {
+                    mh = vh;
+                    mw = vh * cr;
+                } else {
+                    mw = vw;
+                    mh = vw / cr;
+                }
+
+                // 2. 套用放大倍數 a
+                const sw = mw / config.a;
+                const sh = mh / config.a;
+
+                // 3. 根據隨機相對中心點 (rx, ry) 計算絕對座標，並透過 Clamp 確保不超出相機邊界
+                const min_cx = sw / 2;
+                const max_cx = vw - sw / 2;
+                const min_cy = sh / 2;
+                const max_cy = vh - sh / 2;
+
+                const cx = min_cx + config.rx * (max_cx - min_cx);
+                const cy = min_cy + config.ry * (max_cy - min_cy);
+
+                // 計算來源影片裁切的左上角 (Source X, Source Y)
+                const sx = cx - sw / 2;
+                const sy = cy - sh / 2;
+
+                // 4. 將影片裁切並繪製到該畫布上
+                ctx.drawImage(video, sx, sy, sw, sh, 0, 0, cw, ch);
+            });
+
+            requestAnimationFrame(renderLoop);
+        }
+    </script>
+</body>
+</html>
