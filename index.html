@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <!-- 加入 maximum-scale=1.0, user-scalable=no 防止瀏覽器縮放 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>giantCamera | v2.4</title>
+    <title>giantCamera | v2.5</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         * {
@@ -53,8 +53,7 @@
         /* 幾何畫布共同設定 */
         canvas {
             position: absolute;
-            transform: scaleX(-1); /* 前鏡頭預設為鏡像，在此將畫布翻轉 */
-            transform-origin: center;
+            /* 後鏡頭不需要鏡像翻轉，已移除 transform 相關設定 */
         }
 
         /* 根據 001.png 定義的 9 個圖形區塊位置與遮罩 (Clip-path) */
@@ -131,9 +130,9 @@
         startBtn.addEventListener('click', async (e) => {
             e.stopPropagation(); // 避免點擊開始按鈕時，觸發下方 window 的點擊事件
             try {
-                // 取得前置鏡頭
+                // 取得後置鏡頭 (environment)
                 const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }
+                    video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
                 });
                 video.srcObject = stream;
                 video.play();
@@ -152,7 +151,7 @@
                     requestAnimationFrame(renderLoop);
                 };
             } catch (err) {
-                alert('📸🚫');
+                alert('📸🚫 無法開啟相機，請確認設備是否有後置鏡頭並允許權限。');
                 console.error(err);
             }
         });
