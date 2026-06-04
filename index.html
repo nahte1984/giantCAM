@@ -4,12 +4,12 @@
     <meta charset="UTF-8">
     <!-- 加入 maximum-scale=1.0, user-scalable=no 防止瀏覽器縮放 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>giantCamera | v2.3</title>
+    <title>giantCamera | v2.4</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         * {
-            touch-action: manipulation; /* 強制全網頁元素停用雙擊放大行為 */
             -webkit-tap-highlight-color: transparent; /* 移除 iOS 點擊時出現的灰色半透明遮罩 */
+            touch-action: none; /* 強制全網頁元素停用瀏覽器手勢（雙擊放大、滑動等） */
         }
 
         body, html {
@@ -25,7 +25,7 @@
             font-family: sans-serif;
             user-select: none; /* 防止使用者快速點擊時不小心選取到網頁元素 */
             -webkit-user-select: none;
-            touch-action: none; /* 禁用瀏覽器預設手勢（如雙擊放大、滑動等） */
+            -webkit-touch-callout: none; /* 禁用長按選單等 iOS 預設行為 */
         }
 
         /* 歡迎/授權畫面 */
@@ -109,25 +109,6 @@
     <video id="video-source" playsinline autoplay muted style="display: none;"></video>
 
     <script>
-        // --- 新增：核心修正，強制攔截 Safari 雙擊與多指手勢 ---
-        // 禁止雙指縮放
-        document.addEventListener('touchstart', function (event) {
-            if (event.touches.length > 1) {
-                event.preventDefault(); 
-            }
-        }, { passive: false });
-
-        // 計算時間差，禁止雙擊放大 (小於 300 毫秒視為雙擊)
-        let lastTouchEnd = 0;
-        document.addEventListener('touchend', function (event) {
-            const now = (new Date()).getTime();
-            if (now - lastTouchEnd <= 300) {
-                event.preventDefault(); 
-            }
-            lastTouchEnd = now;
-        }, { passive: false });
-        // ------------------------------------------------------
-
         const startBtn = document.getElementById('start-btn');
         const intro = document.getElementById('intro');
         const appContainer = document.getElementById('app-container');
@@ -138,6 +119,13 @@
 
         let configs = [];
         let isPlaying = false;
+
+        // Safari 終極防線：攔截所有非按鈕區塊的觸控預設行為，徹底抹殺雙擊放大的可能性
+        document.addEventListener('touchstart', (e) => {
+            if (isPlaying && e.target !== startBtn) {
+                e.preventDefault(); 
+            }
+        }, { passive: false });
 
         // 啟動相機與應用
         startBtn.addEventListener('click', async (e) => {
@@ -173,9 +161,10 @@
         window.addEventListener('pointerdown', (e) => {
             // 確認已經開始播放，且點擊的不是開始按鈕，就重新隨機產生效果
             if (isPlaying && e.target !== startBtn) {
+                e.preventDefault(); // 再次攔截預設行為雙重保險
                 initConfigs();
             }
-        });
+        }, { passive: false }); // 標記 passive: false 確保 preventDefault 能生效
 
         // 產生九組不重複的參數：放大倍數 (a) 與 中心座標偏移量 (rx, ry)
         function initConfigs() {
