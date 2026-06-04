@@ -2,8 +2,9 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>giantCamera | v2.1</title>
+    <!-- 加入 maximum-scale=1.0, user-scalable=no 防止瀏覽器縮放 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>giantCamera | v2.2</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body, html {
@@ -19,6 +20,7 @@
             font-family: sans-serif;
             user-select: none; /* 防止使用者快速點擊時不小心選取到網頁元素 */
             -webkit-user-select: none;
+            touch-action: none; /* 禁用瀏覽器預設手勢（如雙擊放大、滑動等） */
         }
 
         /* 歡迎/授權畫面 */
