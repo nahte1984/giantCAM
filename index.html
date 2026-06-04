@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>giantCamera | v1.3</title>
+    <title>giantCamera | v2.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body, html {
@@ -17,6 +17,8 @@
             align-items: center;
             overflow: hidden;
             font-family: sans-serif;
+            user-select: none; /* 防止使用者快速點擊時不小心選取到網頁元素 */
+            -webkit-user-select: none;
         }
 
         /* 歡迎/授權畫面 */
@@ -38,6 +40,7 @@
             max-width: 50dvh; /* 優先使用動態視窗高度計算寬度，確保 1:2 比例 */
             aspect-ratio: 1 / 2; /* 依照 001.png 的 1:2 比例維持不變形 */
             display: none; /* 取得權限後顯示 */
+            cursor: pointer; /* 提示使用者這區塊可點擊 */
         }
 
         /* 幾何畫布共同設定 */
@@ -111,7 +114,8 @@
         let isPlaying = false;
 
         // 啟動相機與應用
-        startBtn.addEventListener('click', async () => {
+        startBtn.addEventListener('click', async (e) => {
+            e.stopPropagation(); // 避免點擊開始按鈕時，觸發下方 window 的點擊事件
             try {
                 // 取得前置鏡頭
                 const stream = await navigator.mediaDevices.getUserMedia({
@@ -136,6 +140,14 @@
             } catch (err) {
                 alert('📸🚫');
                 console.error(err);
+            }
+        });
+
+        // 當點擊或觸控畫面任一處時，重新產生隨機配置
+        window.addEventListener('pointerdown', (e) => {
+            // 確認已經開始播放，且點擊的不是開始按鈕，就重新隨機產生效果
+            if (isPlaying && e.target !== startBtn) {
+                initConfigs();
             }
         });
 
