@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>giantCamera | v1.2</title>
+    <title>giantCamera | v1.3</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body, html {
@@ -124,6 +124,10 @@
                 video.onloadedmetadata = () => {
                     intro.style.display = 'none';
                     appContainer.style.display = 'block';
+                    
+                    // 解決邊緣漏色問題：相機載入後，將畫布的 CSS 背景色設為透明
+                    canvases.forEach(c => c.style.backgroundColor = 'transparent');
+                    
                     resizeCanvases();
                     initConfigs();
                     isPlaying = true;
@@ -212,7 +216,8 @@
                 const sy = cy - sh / 2;
 
                 // 4. 將影片裁切並繪製到該畫布上
-                ctx.drawImage(video, sx, sy, sw, sh, 0, 0, cw, ch);
+                // 稍微向外繪製 1px 填滿可能產生的次像素(sub-pixel)縫隙，避免底色透出
+                ctx.drawImage(video, sx, sy, sw, sh, -1, -1, cw + 2, ch + 2);
             });
 
             requestAnimationFrame(renderLoop);
