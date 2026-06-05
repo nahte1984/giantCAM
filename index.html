@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>giantCamera | v3.1</title>
+    <title>giantCamera | v3.2</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         * {
@@ -50,6 +50,11 @@
 
         canvas {
             position: absolute;
+            /* 加入 0.5 秒的 CSS 平滑過場動畫，使用優雅的 ease-in-out 曲線 */
+            transition: top 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+                        left 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+                        width 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+                        height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         /* 初始狀態也全面導入 calc(+1px) 防護，確保第一次載入就不會有任何細縫 */
@@ -110,7 +115,12 @@
         const canvases = Array.from({length: 9}, (_, i) => document.getElementById(`c${i+1}`));
         const contexts = canvases.map(c => c.getContext('2d', { alpha: false }));
 
-        let configs = [];
+        // 用於管理動畫插值的參數陣列
+        let currentConfigs = []; // 當前正在渲染的值
+        let targetConfigs = [];  // 目標值
+        let startConfigs = [];   // 動畫開始時的初始值
+        let animStartTime = 0;   // 動畫開始的時間點
+        const ANIM_DURATION = 500; // 動畫時長 (毫秒)
         let isPlaying = false;
 
         document.addEventListener('touchstart', (e) => {
@@ -131,11 +141,14 @@
                 video.onloadedmetadata = () => {
                     intro.style.display = 'none';
                     appContainer.style.display = 'block';
-                    
                     canvases.forEach(c => c.style.backgroundColor = 'transparent');
                     
-                    resizeCanvases();
-                    initConfigs();
+                    // 初始化時，起點、現在、目標都設為相同數值
+                    const initialConfig = generateRandomConfigs();
+                    currentConfigs = JSON.parse(JSON.stringify(initialConfig));
+                    targetConfigs = JSON.parse(JSON.stringify(initialConfig));
+                    startConfigs = JSON.parse(JSON.stringify(initialConfig));
+
                     isPlaying = true;
                     requestAnimationFrame(renderLoop);
                 };
@@ -149,41 +162,46 @@
             if (isPlaying && e.target !== startBtn) {
                 e.preventDefault(); 
                 
-                initConfigs();
+                // 1. 將當前正在畫的數值存為起點 (避免狂點時畫面產生跳動)
+                startConfigs = JSON.parse(JSON.stringify(currentConfigs));
+                // 2. 產生新的目標數值
+                targetConfigs = generateRandomConfigs();
+                // 3. 重設動畫起始時間
+                animStartTime = performance.now();
+                
+                // 觸發外部幾何 CSS 排版的隨機動畫
                 randomizeLayout();
-                resizeCanvases(); // 重算畫布大小，確保無縫更新
             }
         }, { passive: false }); 
 
-        function initConfigs() {
+        // 產生一組 9 個全新的隨機相機參數
+        function generateRandomConfigs() {
             const multipliers = Array.from({length: 15}, (_, i) => i + 1);
             for (let i = multipliers.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [multipliers[i], multipliers[j]] = [multipliers[j], multipliers[i]];
             }
 
-            configs = [];
+            let newConfigs = [];
             for (let i = 0; i < 9; i++) {
-                configs.push({
+                newConfigs.push({
                     a: multipliers[i],
                     rx: Math.random(),
                     ry: Math.random()
                 });
             }
+            return newConfigs;
         }
 
         // 動態隨機變更幾何圖形排版的嚴謹計算函式 (已導入整數化與 +1px 修補法)
         function randomizeLayout() {
             // --- 大字部位 ---
-            // 使用 Math.round() 強制取整數，消滅 99% 的浮點數渲染誤差
             const splitY = Math.round(5 + Math.random() * 40); 
             const lowerHeight = 50 - splitY;
 
-            // c1, c2 高度套用 splitY，並強制 +1px 完美覆蓋接縫
             document.getElementById('c1').style.height = `calc(${splitY}% + 1px)`;
             document.getElementById('c2').style.height = `calc(${splitY}% + 1px)`;
 
-            // c3, c4, c5 起點為 splitY，高度為 lowerHeight 並強制 +1px
             const els345 = ['c3', 'c4', 'c5'];
             els345.forEach(id => {
                 const el = document.getElementById(id);
@@ -192,21 +210,17 @@
             });
 
             // --- 中字部位 ---
-            // 同樣使用 Math.round() 取整數
             const top89 = Math.round(55 + Math.random() * 15);      
             const height89 = Math.round(10 + Math.random() * 10);   
-            
             const left8 = Math.round(10 + Math.random() * 30);      
             const width89 = 50 - left8;                 
 
-            // 套用 c8 (加上 1px 消除左右與上下接縫)
             const el8 = document.getElementById('c8');
             el8.style.top = `${top89}%`;
             el8.style.height = `calc(${height89}% + 1px)`;
             el8.style.left = `${left8}%`;
             el8.style.width = `calc(${width89}% + 1px)`;
 
-            // 套用 c9 (固定從正中央50%起算，完美鏡像)
             const el9 = document.getElementById('c9');
             el9.style.top = `${top89}%`;
             el9.style.height = `calc(${height89}% + 1px)`;
@@ -214,25 +228,39 @@
             el9.style.width = `calc(${width89}% + 1px)`;
         }
 
-        function resizeCanvases() {
-            const dpr = window.devicePixelRatio || 1;
-            canvases.forEach(c => {
-                const rect = c.getBoundingClientRect();
-                c.width = rect.width * dpr;
-                c.height = rect.height * dpr;
-            });
-        }
-
-        window.addEventListener('resize', () => {
-            if (isPlaying) resizeCanvases();
-        });
-
-        function renderLoop() {
+        // 核心渲染迴圈 (加入時間動畫插值與即時縮放解析度計算)
+        function renderLoop(now) {
             if (!isPlaying) return;
 
+            // 計算動畫進度 (0 到 1)
+            let progress = 1;
+            if (animStartTime > 0) {
+                progress = Math.min((now - animStartTime) / ANIM_DURATION, 1);
+            }
+
+            // 優雅的 Cubic Easing In-Out 曲線公式 (與 CSS 動畫節奏匹配)
+            const easeInOutCubic = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+            const tEased = easeInOutCubic(progress);
+
+            // 更新當前每一格畫布的相機參數 (從 start 平滑過渡到 target)
+            for (let i = 0; i < 9; i++) {
+                currentConfigs[i].a = startConfigs[i].a + (targetConfigs[i].a - startConfigs[i].a) * tEased;
+                currentConfigs[i].rx = startConfigs[i].rx + (targetConfigs[i].rx - startConfigs[i].rx) * tEased;
+                currentConfigs[i].ry = startConfigs[i].ry + (targetConfigs[i].ry - startConfigs[i].ry) * tEased;
+            }
+
+            // [效能優化] 統一先讀取所有畫布的最新尺寸，避免導致瀏覽器重新排版(Layout Thrashing)
+            const rects = canvases.map(c => c.getBoundingClientRect());
+            const dpr = window.devicePixelRatio || 1;
+
             canvases.forEach((canvas, i) => {
+                const rect = rects[i];
+                // 每幀即時寫入最新解析度，這確保了動畫播放中的 0.5 秒內，影像「絕對不會」被變形拉伸
+                canvas.width = rect.width * dpr;
+                canvas.height = rect.height * dpr;
+
                 const ctx = contexts[i];
-                const config = configs[i];
+                const config = currentConfigs[i];
                 
                 const vw = video.videoWidth;
                 const vh = video.videoHeight;
