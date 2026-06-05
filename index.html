@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>giantCamera | v4.1</title>
+    <title>giantCamera | v4.2</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         * {
@@ -198,9 +198,9 @@
         // 動態隨機變更幾何圖形排版的嚴謹計算函式
         function randomizeLayout() {
             // ============================================
-            // 核心規則：統一垂直分割線 X 軸 (20% ~ 80%)
+            // 核心規則：統一垂直分割線 X 軸 (40% ~ 60%)
             // ============================================
-            const splitX = Math.round(20 + Math.random() * 60);
+            const splitX = Math.round(40 + Math.random() * 20);
 
             // --- 大字部位 (上半部) ---
             const splitY = Math.round(5 + Math.random() * 40); 
