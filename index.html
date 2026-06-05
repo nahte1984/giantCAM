@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>giantCamera | v3.0</title>
+    <title>giantCamera | v3.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         * {
@@ -45,36 +45,37 @@
             aspect-ratio: 1 / 2;
             display: none;
             cursor: pointer;
+            overflow: hidden; /* 確保超出的 1px 被俐落裁切 */
         }
 
         canvas {
             position: absolute;
         }
 
-        /* 恢復使用精確的 left, top, width, height 百分比定位，確保 Canvas 渲染不破圖 */
+        /* 初始狀態也全面導入 calc(+1px) 防護，確保第一次載入就不會有任何細縫 */
         
         /* 上方 1/4 兩個正四邊形 */
-        #c1 { left: 0%; top: 0%; width: 50%; height: 25%; z-index: 1; background-color: #dce831; }
-        #c2 { left: 50%; top: 0%; width: 50%; height: 25%; z-index: 1; background-color: #1baf53; }
+        #c1 { left: 0%; top: 0%; width: calc(50% + 1px); height: calc(25% + 1px); z-index: 1; background-color: #dce831; }
+        #c2 { left: 50%; top: 0%; width: calc(50% + 1px); height: calc(25% + 1px); z-index: 1; background-color: #1baf53; }
 
         /* 中間 1/4 兩個底層矩形，透過頂層三角形覆蓋 */
-        #c3 { left: 0%; top: 25%; width: 50%; height: 25%; z-index: 1; background-color: #3611a1; }
-        #c5 { left: 50%; top: 25%; width: 50%; height: 25%; z-index: 1; background-color: #8a0ae9; }
+        #c3 { left: 0%; top: 25%; width: calc(50% + 1px); height: calc(25% + 1px); z-index: 1; background-color: #3611a1; }
+        #c5 { left: 50%; top: 25%; width: calc(50% + 1px); height: calc(25% + 1px); z-index: 1; background-color: #8a0ae9; }
         
         /* 頂層粉色三角形 */
         #c4 { 
-            left: 0%; top: 25%; width: 100%; height: 25%; z-index: 2; 
+            left: 0%; top: 25%; width: calc(100% + 1px); height: calc(25% + 1px); z-index: 2; 
             clip-path: polygon(50% 0, 100% 100%, 0 100%); 
             background-color: #eb55b4; 
         }
 
-        /* 下方 1/2 背景矩形 (維持不變) */
-        #c6 { left: 0%; top: 50%; width: 50%; height: 50%; z-index: 1; background-color: #017afd; }
-        #c7 { left: 50%; top: 50%; width: 50%; height: 50%; z-index: 1; background-color: #26d1e4; }
+        /* 下方 1/2 背景矩形 */
+        #c6 { left: 0%; top: 50%; width: calc(50% + 1px); height: calc(50% + 1px); z-index: 1; background-color: #017afd; }
+        #c7 { left: 50%; top: 50%; width: calc(50% + 1px); height: calc(50% + 1px); z-index: 1; background-color: #26d1e4; }
 
         /* 下方中間的紅橘兩色內部矩形 */
-        #c8 { left: 12.5%; top: 65.625%; width: 37.5%; height: 18.75%; z-index: 3; background-color: #f54c37; }
-        #c9 { left: 50%; top: 65.625%; width: 37.5%; height: 18.75%; z-index: 3; background-color: #fe8b20; }
+        #c8 { left: 12.5%; top: 65.625%; width: calc(37.5% + 1px); height: calc(18.75% + 1px); z-index: 3; background-color: #f54c37; }
+        #c9 { left: 50%; top: 65.625%; width: calc(37.5% + 1px); height: calc(18.75% + 1px); z-index: 3; background-color: #fe8b20; }
     </style>
 </head>
 <body>
@@ -171,45 +172,46 @@
             }
         }
 
-        // 動態隨機變更幾何圖形排版的嚴謹計算函式
+        // 動態隨機變更幾何圖形排版的嚴謹計算函式 (已導入整數化與 +1px 修補法)
         function randomizeLayout() {
             // --- 大字部位 ---
-            // 第一橫的高度，隨機在 5% ~ 45% 之間
-            const splitY = 5 + Math.random() * 40; 
-            const lowerHeight = 50 - splitY; // 確保與上半部相加嚴格等於 50%
+            // 使用 Math.round() 強制取整數，消滅 99% 的浮點數渲染誤差
+            const splitY = Math.round(5 + Math.random() * 40); 
+            const lowerHeight = 50 - splitY;
 
-            // c1, c2 高度套用 splitY
-            document.getElementById('c1').style.height = `${splitY}%`;
-            document.getElementById('c2').style.height = `${splitY}%`;
+            // c1, c2 高度套用 splitY，並強制 +1px 完美覆蓋接縫
+            document.getElementById('c1').style.height = `calc(${splitY}% + 1px)`;
+            document.getElementById('c2').style.height = `calc(${splitY}% + 1px)`;
 
-            // c3, c4, c5 起點為 splitY，高度為 lowerHeight (完美接合且停在50%)
+            // c3, c4, c5 起點為 splitY，高度為 lowerHeight 並強制 +1px
             const els345 = ['c3', 'c4', 'c5'];
             els345.forEach(id => {
                 const el = document.getElementById(id);
                 el.style.top = `${splitY}%`;
-                el.style.height = `${lowerHeight}%`;
+                el.style.height = `calc(${lowerHeight}% + 1px)`;
             });
 
             // --- 中字部位 ---
-            const top89 = 55 + Math.random() * 15;      // 範圍：55% ~ 70%
-            const height89 = 10 + Math.random() * 10;   // 範圍：10% ~ 20%
+            // 同樣使用 Math.round() 取整數
+            const top89 = Math.round(55 + Math.random() * 15);      
+            const height89 = Math.round(10 + Math.random() * 10);   
             
-            const left8 = 10 + Math.random() * 30;      // 範圍：10% ~ 40%
-            const width89 = 50 - left8;                 // 寬度：50 - left
+            const left8 = Math.round(10 + Math.random() * 30);      
+            const width89 = 50 - left8;                 
 
-            // 套用 c8
+            // 套用 c8 (加上 1px 消除左右與上下接縫)
             const el8 = document.getElementById('c8');
             el8.style.top = `${top89}%`;
-            el8.style.height = `${height89}%`;
+            el8.style.height = `calc(${height89}% + 1px)`;
             el8.style.left = `${left8}%`;
-            el8.style.width = `${width89}%`;
+            el8.style.width = `calc(${width89}% + 1px)`;
 
-            // 套用 c9 (固定從正中央50%起算，寬度相等)
+            // 套用 c9 (固定從正中央50%起算，完美鏡像)
             const el9 = document.getElementById('c9');
             el9.style.top = `${top89}%`;
-            el9.style.height = `${height89}%`;
+            el9.style.height = `calc(${height89}% + 1px)`;
             el9.style.left = `50%`;
-            el9.style.width = `${width89}%`;
+            el9.style.width = `calc(${width89}% + 1px)`;
         }
 
         function resizeCanvases() {
@@ -263,7 +265,7 @@
                 const sx = cx - sw / 2;
                 const sy = cy - sh / 2;
 
-                // 稍微向外繪製 1px 填滿可能產生的次像素(sub-pixel)縫隙，避免底色透出
+                // 稍微向外繪製 1px 填滿 Canvas 內部的次像素邊緣
                 ctx.drawImage(video, sx, sy, sw, sh, -1, -1, cw + 2, ch + 2);
             });
 
