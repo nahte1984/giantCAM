@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <!-- 加入 maximum-scale=1.0, user-scalable=no 防止瀏覽器縮放 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>giantCamera | v2.5</title>
+    <title>giantCamera | v2.6</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         * {
@@ -83,11 +83,10 @@
 </head>
 <body>
 
-    <!-- 初始畫面與按鈕 -->
+    <!-- 初始畫面與圖片按鈕 -->
     <div id="intro">
-        <button id="start-btn" class="px-8 py-3 bg-white text-[#656565] text-[18px] font-bold rounded-full shadow-2xl hover:bg-gray-100 transition-all active:scale-95">
-            大中camera
-        </button>
+        <!-- 替換為 giant.png，並加上指定的 class -->
+        <img id="start-btn" src="giant.png" alt="giant" class="max-w-[30%] max-h-[30%] object-contain drop-shadow-xl cursor-pointer transition-all active:scale-95">
     </div>
 
     <!-- 相機影像處理區塊 -->
