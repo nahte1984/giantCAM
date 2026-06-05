@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>giantCamera | v4.2</title>
+    <title>giantCamera | v4.3</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         * {
@@ -248,9 +248,10 @@
             c7.style.left = `${splitX}%`;
             c7.style.width = `calc(${100 - splitX}% + 1px)`;
 
-            // c8, c9 的相鄰交界處現在是 splitX，寬度計算需防呆溢出
-            // 最大安全寬度 = 確保不會超出左邊緣(splitX) 且不超出右邊緣(100 - splitX)
-            const maxWidth89 = Math.min(splitX, 100 - splitX);
+            // c8, c9 的相鄰交界處現在是 splitX
+            // 新規則：c8 左邊界 >= 15%，c9 右邊界 <= 85%
+            // 代表最大寬度不能超過 (splitX - 15) 且不能超過 (85 - splitX)
+            const maxWidth89 = Math.min(splitX - 15, 85 - splitX);
             const width89 = Math.round(5 + Math.random() * (maxWidth89 - 5)); // 寬度在 5% 到 最大安全值 之間              
             const left8 = splitX - width89;
 
