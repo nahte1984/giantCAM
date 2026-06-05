@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>giantCamera | v3.2</title>
+    <title>giantCamera | v4.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         * {
@@ -50,11 +50,13 @@
 
         canvas {
             position: absolute;
-            /* 加入 0.5 秒的 CSS 平滑過場動畫，使用優雅的 ease-in-out 曲線 */
+            /* 將座標、尺寸、裁切路徑(三角形)都加入 0.5 秒平滑過場，使用優雅的 ease-in-out 曲線 */
             transition: top 0.5s cubic-bezier(0.4, 0, 0.2, 1),
                         left 0.5s cubic-bezier(0.4, 0, 0.2, 1),
                         width 0.5s cubic-bezier(0.4, 0, 0.2, 1),
-                        height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+                        height 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+                        clip-path 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+                        -webkit-clip-path 0.5s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         /* 初始狀態也全面導入 calc(+1px) 防護，確保第一次載入就不會有任何細縫 */
@@ -153,7 +155,7 @@
                     requestAnimationFrame(renderLoop);
                 };
             } catch (err) {
-                alert('📸🚫 無法開啟相機，請確認設備是否有後置鏡頭並允許權限。');
+                alert('📸🚫🤔');
                 console.error(err);
             }
         });
@@ -162,7 +164,7 @@
             if (isPlaying && e.target !== startBtn) {
                 e.preventDefault(); 
                 
-                // 1. 將當前正在畫的數值存為起點 (避免狂點時畫面產生跳動)
+                // 1. 將當前正在畫的數值存為起點
                 startConfigs = JSON.parse(JSON.stringify(currentConfigs));
                 // 2. 產生新的目標數值
                 targetConfigs = generateRandomConfigs();
@@ -193,38 +195,77 @@
             return newConfigs;
         }
 
-        // 動態隨機變更幾何圖形排版的嚴謹計算函式 (已導入整數化與 +1px 修補法)
+        // 動態隨機變更幾何圖形排版的嚴謹計算函式
         function randomizeLayout() {
-            // --- 大字部位 ---
+            // ============================================
+            // 核心規則：統一垂直分割線 X 軸 (20% ~ 80%)
+            // ============================================
+            const splitX = Math.round(20 + Math.random() * 60);
+
+            // --- 大字部位 (上半部) ---
             const splitY = Math.round(5 + Math.random() * 40); 
             const lowerHeight = 50 - splitY;
 
-            document.getElementById('c1').style.height = `calc(${splitY}% + 1px)`;
-            document.getElementById('c2').style.height = `calc(${splitY}% + 1px)`;
+            // c1, c2 更新 X 與寬度
+            const c1 = document.getElementById('c1');
+            c1.style.height = `calc(${splitY}% + 1px)`;
+            c1.style.width = `calc(${splitX}% + 1px)`;
 
-            const els345 = ['c3', 'c4', 'c5'];
-            els345.forEach(id => {
-                const el = document.getElementById(id);
-                el.style.top = `${splitY}%`;
-                el.style.height = `calc(${lowerHeight}% + 1px)`;
-            });
+            const c2 = document.getElementById('c2');
+            c2.style.height = `calc(${splitY}% + 1px)`;
+            c2.style.left = `${splitX}%`;
+            c2.style.width = `calc(${100 - splitX}% + 1px)`;
 
-            // --- 中字部位 ---
+            // c3, c5 更新 X 與寬度
+            const c3 = document.getElementById('c3');
+            c3.style.top = `${splitY}%`;
+            c3.style.height = `calc(${lowerHeight}% + 1px)`;
+            c3.style.width = `calc(${splitX}% + 1px)`;
+
+            const c5 = document.getElementById('c5');
+            c5.style.top = `${splitY}%`;
+            c5.style.height = `calc(${lowerHeight}% + 1px)`;
+            c5.style.left = `${splitX}%`;
+            c5.style.width = `calc(${100 - splitX}% + 1px)`;
+
+            // c4 (三角形頂點) 的頂部座標(apex)必須隨著 splitX 同步移動
+            const c4 = document.getElementById('c4');
+            c4.style.top = `${splitY}%`;
+            c4.style.height = `calc(${lowerHeight}% + 1px)`;
+            c4.style.clipPath = `polygon(${splitX}% 0, 100% 100%, 0 100%)`;
+            c4.style.webkitClipPath = `polygon(${splitX}% 0, 100% 100%, 0 100%)`;
+
+
+            // --- 中字部位 (下半部) ---
             const top89 = Math.round(55 + Math.random() * 15);      
             const height89 = Math.round(10 + Math.random() * 10);   
-            const left8 = Math.round(10 + Math.random() * 30);      
-            const width89 = 50 - left8;                 
+            
+            // c6, c7 背景更新 X 與寬度
+            const c6 = document.getElementById('c6');
+            c6.style.width = `calc(${splitX}% + 1px)`;
 
+            const c7 = document.getElementById('c7');
+            c7.style.left = `${splitX}%`;
+            c7.style.width = `calc(${100 - splitX}% + 1px)`;
+
+            // c8, c9 的相鄰交界處現在是 splitX，寬度計算需防呆溢出
+            // 最大安全寬度 = 確保不會超出左邊緣(splitX) 且不超出右邊緣(100 - splitX)
+            const maxWidth89 = Math.min(splitX, 100 - splitX);
+            const width89 = Math.round(5 + Math.random() * (maxWidth89 - 5)); // 寬度在 5% 到 最大安全值 之間              
+            const left8 = splitX - width89;
+
+            // 套用 c8 (靠在 splitX 左側)
             const el8 = document.getElementById('c8');
             el8.style.top = `${top89}%`;
             el8.style.height = `calc(${height89}% + 1px)`;
             el8.style.left = `${left8}%`;
             el8.style.width = `calc(${width89}% + 1px)`;
 
+            // 套用 c9 (靠在 splitX 右側，與 c8 寬度相等，完美鏡像)
             const el9 = document.getElementById('c9');
             el9.style.top = `${top89}%`;
             el9.style.height = `calc(${height89}% + 1px)`;
-            el9.style.left = `50%`;
+            el9.style.left = `${splitX}%`;
             el9.style.width = `calc(${width89}% + 1px)`;
         }
 
