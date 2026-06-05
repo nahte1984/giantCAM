@@ -2,14 +2,13 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <!-- 加入 maximum-scale=1.0, user-scalable=no 防止瀏覽器縮放 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>giantCamera | v2.6</title>
+    <title>giantCamera | v3.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         * {
-            -webkit-tap-highlight-color: transparent; /* 移除 iOS 點擊時出現的灰色半透明遮罩 */
-            touch-action: none; /* 強制全網頁元素停用瀏覽器手勢（雙擊放大、滑動等） */
+            -webkit-tap-highlight-color: transparent;
+            touch-action: none;
         }
 
         body, html {
@@ -23,12 +22,11 @@
             align-items: center;
             overflow: hidden;
             font-family: sans-serif;
-            user-select: none; /* 防止使用者快速點擊時不小心選取到網頁元素 */
+            user-select: none;
             -webkit-user-select: none;
-            -webkit-touch-callout: none; /* 禁用長按選單等 iOS 預設行為 */
+            -webkit-touch-callout: none;
         }
 
-        /* 歡迎/授權畫面 */
         #intro {
             position: absolute;
             inset: 0;
@@ -39,53 +37,50 @@
             z-index: 10;
         }
 
-        /* 互動影像容器 */
         #app-container {
             position: relative;
             width: 100%;
             max-width: 50vh;
-            max-width: 50dvh; /* 優先使用動態視窗高度計算寬度，確保 1:2 比例 */
-            aspect-ratio: 1 / 2; /* 依照 001.png 的 1:2 比例維持不變形 */
-            display: none; /* 取得權限後顯示 */
-            cursor: pointer; /* 提示使用者這區塊可點擊 */
+            max-width: 50dvh;
+            aspect-ratio: 1 / 2;
+            display: none;
+            cursor: pointer;
         }
 
-        /* 幾何畫布共同設定 */
         canvas {
             position: absolute;
-            /* 後鏡頭不需要鏡像翻轉，已移除 transform 相關設定 */
         }
 
-        /* 根據 001.png 定義的 9 個圖形區塊位置與遮罩 (Clip-path) */
+        /* 恢復使用精確的 left, top, width, height 百分比定位，確保 Canvas 渲染不破圖 */
         
         /* 上方 1/4 兩個正四邊形 */
-        #c1 { left: 0; top: 0; width: 50%; height: 25%; z-index: 1; background-color: #dce831; }
-        #c2 { left: 50%; top: 0; width: 50%; height: 25%; z-index: 1; background-color: #1baf53; }
+        #c1 { left: 0%; top: 0%; width: 50%; height: 25%; z-index: 1; background-color: #dce831; }
+        #c2 { left: 50%; top: 0%; width: 50%; height: 25%; z-index: 1; background-color: #1baf53; }
 
-        /* 中間 1/4 兩個底層矩形，透過頂層三角形覆蓋，視覺上會變成側邊三角形 */
-        #c3 { left: 0; top: 25%; width: 50%; height: 25%; z-index: 1; background-color: #3611a1; }
+        /* 中間 1/4 兩個底層矩形，透過頂層三角形覆蓋 */
+        #c3 { left: 0%; top: 25%; width: 50%; height: 25%; z-index: 1; background-color: #3611a1; }
         #c5 { left: 50%; top: 25%; width: 50%; height: 25%; z-index: 1; background-color: #8a0ae9; }
+        
         /* 頂層粉色三角形 */
         #c4 { 
-            left: 0; top: 25%; width: 100%; height: 25%; z-index: 2; 
+            left: 0%; top: 25%; width: 100%; height: 25%; z-index: 2; 
             clip-path: polygon(50% 0, 100% 100%, 0 100%); 
             background-color: #eb55b4; 
         }
 
-        /* 下方 1/2 背景矩形 */
-        #c6 { left: 0; top: 50%; width: 50%; height: 50%; z-index: 1; background-color: #017afd; }
+        /* 下方 1/2 背景矩形 (維持不變) */
+        #c6 { left: 0%; top: 50%; width: 50%; height: 50%; z-index: 1; background-color: #017afd; }
         #c7 { left: 50%; top: 50%; width: 50%; height: 50%; z-index: 1; background-color: #26d1e4; }
 
-        /* 下方中間的紅橘兩色內部矩形，修正 top 值以垂直置中 */
-        #c8 { left: 12.5%; top: 65.67%; width: 37.5%; height: 18.75%; z-index: 3; background-color: #f54c37; }
-        #c9 { left: 50%; top: 65.67%; width: 37.5%; height: 18.75%; z-index: 3; background-color: #fe8b20; }
+        /* 下方中間的紅橘兩色內部矩形 */
+        #c8 { left: 12.5%; top: 65.625%; width: 37.5%; height: 18.75%; z-index: 3; background-color: #f54c37; }
+        #c9 { left: 50%; top: 65.625%; width: 37.5%; height: 18.75%; z-index: 3; background-color: #fe8b20; }
     </style>
 </head>
 <body>
 
     <!-- 初始畫面與圖片按鈕 -->
     <div id="intro">
-        <!-- 替換為 giant.png，並加上指定的 class -->
         <img id="start-btn" src="giant.png" alt="giant" class="max-w-[30%] max-h-[30%] object-contain drop-shadow-xl cursor-pointer transition-all active:scale-95">
     </div>
 
@@ -103,7 +98,6 @@
         <canvas id="c9"></canvas>
     </div>
 
-    <!-- 隱藏的攝影機串流來源 -->
     <video id="video-source" playsinline autoplay muted style="display: none;"></video>
 
     <script>
@@ -118,30 +112,25 @@
         let configs = [];
         let isPlaying = false;
 
-        // Safari 終極防線：攔截所有非按鈕區塊的觸控預設行為，徹底抹殺雙擊放大的可能性
         document.addEventListener('touchstart', (e) => {
             if (isPlaying && e.target !== startBtn) {
                 e.preventDefault(); 
             }
         }, { passive: false });
 
-        // 啟動相機與應用
         startBtn.addEventListener('click', async (e) => {
-            e.stopPropagation(); // 避免點擊開始按鈕時，觸發下方 window 的點擊事件
+            e.stopPropagation();
             try {
-                // 取得後置鏡頭 (environment)
                 const stream = await navigator.mediaDevices.getUserMedia({
                     video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
                 });
                 video.srcObject = stream;
                 video.play();
 
-                // 準備就緒後啟動邏輯
                 video.onloadedmetadata = () => {
                     intro.style.display = 'none';
                     appContainer.style.display = 'block';
                     
-                    // 解決邊緣漏色問題：相機載入後，將畫布的 CSS 背景色設為透明
                     canvases.forEach(c => c.style.backgroundColor = 'transparent');
                     
                     resizeCanvases();
@@ -155,18 +144,17 @@
             }
         });
 
-        // 當點擊或觸控畫面任一處時，重新產生隨機配置
         window.addEventListener('pointerdown', (e) => {
-            // 確認已經開始播放，且點擊的不是開始按鈕，就重新隨機產生效果
             if (isPlaying && e.target !== startBtn) {
-                e.preventDefault(); // 再次攔截預設行為雙重保險
+                e.preventDefault(); 
+                
                 initConfigs();
+                randomizeLayout();
+                resizeCanvases(); // 重算畫布大小，確保無縫更新
             }
-        }, { passive: false }); // 標記 passive: false 確保 preventDefault 能生效
+        }, { passive: false }); 
 
-        // 產生九組不重複的參數：放大倍數 (a) 與 中心座標偏移量 (rx, ry)
         function initConfigs() {
-            // 產生 1 到 15 的陣列並洗牌 (隨機不重複)
             const multipliers = Array.from({length: 15}, (_, i) => i + 1);
             for (let i = multipliers.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
@@ -176,14 +164,54 @@
             configs = [];
             for (let i = 0; i < 9; i++) {
                 configs.push({
-                    a: multipliers[i],   // 放大倍數 a
-                    rx: Math.random(),   // 相對中心 X (0.0 ~ 1.0)
-                    ry: Math.random()    // 相對中心 Y (0.0 ~ 1.0)
+                    a: multipliers[i],
+                    rx: Math.random(),
+                    ry: Math.random()
                 });
             }
         }
 
-        // 維持 Canvas 解析度與其 CSS 尺寸相同
+        // 動態隨機變更幾何圖形排版的嚴謹計算函式
+        function randomizeLayout() {
+            // --- 大字部位 ---
+            // 第一橫的高度，隨機在 5% ~ 45% 之間
+            const splitY = 5 + Math.random() * 40; 
+            const lowerHeight = 50 - splitY; // 確保與上半部相加嚴格等於 50%
+
+            // c1, c2 高度套用 splitY
+            document.getElementById('c1').style.height = `${splitY}%`;
+            document.getElementById('c2').style.height = `${splitY}%`;
+
+            // c3, c4, c5 起點為 splitY，高度為 lowerHeight (完美接合且停在50%)
+            const els345 = ['c3', 'c4', 'c5'];
+            els345.forEach(id => {
+                const el = document.getElementById(id);
+                el.style.top = `${splitY}%`;
+                el.style.height = `${lowerHeight}%`;
+            });
+
+            // --- 中字部位 ---
+            const top89 = 55 + Math.random() * 15;      // 範圍：55% ~ 70%
+            const height89 = 10 + Math.random() * 10;   // 範圍：10% ~ 20%
+            
+            const left8 = 10 + Math.random() * 30;      // 範圍：10% ~ 40%
+            const width89 = 50 - left8;                 // 寬度：50 - left
+
+            // 套用 c8
+            const el8 = document.getElementById('c8');
+            el8.style.top = `${top89}%`;
+            el8.style.height = `${height89}%`;
+            el8.style.left = `${left8}%`;
+            el8.style.width = `${width89}%`;
+
+            // 套用 c9 (固定從正中央50%起算，寬度相等)
+            const el9 = document.getElementById('c9');
+            el9.style.top = `${top89}%`;
+            el9.style.height = `${height89}%`;
+            el9.style.left = `50%`;
+            el9.style.width = `${width89}%`;
+        }
+
         function resizeCanvases() {
             const dpr = window.devicePixelRatio || 1;
             canvases.forEach(c => {
@@ -197,7 +225,6 @@
             if (isPlaying) resizeCanvases();
         });
 
-        // 核心渲染迴圈
         function renderLoop() {
             if (!isPlaying) return;
 
@@ -212,7 +239,6 @@
 
                 if (vw === 0 || vh === 0 || cw === 0 || ch === 0) return;
 
-                // 1. 根據畫布比例計算可放入最大的畫面區域 (Object-fit: cover 邏輯)
                 const cr = cw / ch;
                 let mw, mh;
                 if (vw / vh > cr) {
@@ -223,11 +249,9 @@
                     mh = vw / cr;
                 }
 
-                // 2. 套用放大倍數 a
                 const sw = mw / config.a;
                 const sh = mh / config.a;
 
-                // 3. 根據隨機相對中心點 (rx, ry) 計算絕對座標，並透過 Clamp 確保不超出相機邊界
                 const min_cx = sw / 2;
                 const max_cx = vw - sw / 2;
                 const min_cy = sh / 2;
@@ -236,11 +260,9 @@
                 const cx = min_cx + config.rx * (max_cx - min_cx);
                 const cy = min_cy + config.ry * (max_cy - min_cy);
 
-                // 計算來源影片裁切的左上角 (Source X, Source Y)
                 const sx = cx - sw / 2;
                 const sy = cy - sh / 2;
 
-                // 4. 將影片裁切並繪製到該畫布上
                 // 稍微向外繪製 1px 填滿可能產生的次像素(sub-pixel)縫隙，避免底色透出
                 ctx.drawImage(video, sx, sy, sw, sh, -1, -1, cw + 2, ch + 2);
             });
